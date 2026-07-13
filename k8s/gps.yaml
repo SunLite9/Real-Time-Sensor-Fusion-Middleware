@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gps-sim
+  labels:
+    app: gps-sim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gps-sim
+  template:
+    metadata:
+      labels:
+        app: gps-sim
+    spec:
+      containers:
+        - name: gps-sim
+          image: sensor-fusion/gps-sim:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MQTT_BROKER_HOST
+              value: "mosquitto"
+            - name: PUBLISH_RATE_HZ
+              value: "2.0"
+            - name: CRASH_ENDPOINT_ENABLED
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: camera-sim
+  labels:
+    app: camera-sim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: camera-sim
+  template:
+    metadata:
+      labels:
+        app: camera-sim
+    spec:
+      containers:
+        - name: camera-sim
+          image: sensor-fusion/camera-sim:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MQTT_BROKER_HOST
+              value: "mosquitto"
+            - name: PUBLISH_RATE_HZ
+              value: "30.0"
+            - name: CRASH_ENDPOINT_ENABLED
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "32Mi"
+            limits:
+              cpu: "150m"
+              memory: "64Mi"

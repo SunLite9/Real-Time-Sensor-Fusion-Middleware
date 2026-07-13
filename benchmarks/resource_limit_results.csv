@@ -1,0 +1,3 @@
+label,trials,miss_rate_pct_mean,miss_rate_pct_std,avg_duration_ms_mean,avg_duration_ms_std,worst_case_ms_mean,worst_case_ms_std,jitter_ms_mean,jitter_ms_std,fusion_cpu_millicores_mean,fusion_cpu_millicores_std
+original,3,0.0,0.0,2.355617628312839,1.185025795517641,26.13655726114909,19.971153576189693,3.958830397315605,3.135710476488286,750.3333333333334,0.5773502691896257
+tightened,3,100.0,0.0,nan,nan,nan,nan,nan,nan,99.0,1.0

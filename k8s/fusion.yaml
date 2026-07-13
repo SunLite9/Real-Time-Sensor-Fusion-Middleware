@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fusion-service
+  labels:
+    app: fusion-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fusion-service
+  template:
+    metadata:
+      labels:
+        app: fusion-service
+    spec:
+      containers:
+        - name: fusion-service
+          image: sensor-fusion/fusion-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MQTT_BROKER_HOST
+              value: "mosquitto"
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "64Mi"
+            limits:
+              cpu: "750m"
+              memory: "128Mi"

@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  unit-tests:
+    name: Unit tests (no cluster required)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Timing instrumentation self-test
+        run: python tests/test_timing_stress.py
+
+  cluster-smoke-test:
+    name: kind cluster smoke test (MQTT + fusion accuracy)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: sensor-fusion
+
+      - name: Build sensor + fusion images
+        run: |
+          docker build -t sensor-fusion/lidar-sim:latest -f sensors/Dockerfile.lidar .
+          docker build -t sensor-fusion/camera-sim:latest -f sensors/Dockerfile.camera .
+          docker build -t sensor-fusion/imu-sim:latest -f sensors/Dockerfile.imu .
+          docker build -t sensor-fusion/gps-sim:latest -f sensors/Dockerfile.gps .
+          docker build -t sensor-fusion/fusion-service:latest -f fusion/Dockerfile .
+
+      - name: Load images into kind
+        run: |
+          kind load docker-image sensor-fusion/lidar-sim:latest --name sensor-fusion
+          kind load docker-image sensor-fusion/camera-sim:latest --name sensor-fusion
+          kind load docker-image sensor-fusion/imu-sim:latest --name sensor-fusion
+          kind load docker-image sensor-fusion/gps-sim:latest --name sensor-fusion
+          kind load docker-image sensor-fusion/fusion-service:latest --name sensor-fusion
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/mosquitto --timeout=120s
+          kubectl rollout status deployment/lidar-sim --timeout=120s
+          kubectl rollout status deployment/camera-sim --timeout=120s
+          kubectl rollout status deployment/imu-sim --timeout=120s
+          kubectl rollout status deployment/gps-sim --timeout=120s
+          kubectl rollout status deployment/fusion-service --timeout=120s
+
+      - name: MQTT smoke test (all four sensors publishing)
+        run: |
+          kubectl port-forward svc/mosquitto 1883:1883 &
+          sleep 3
+          python tests/mqtt_smoke_test.py --duration 8
+
+      - name: Fusion accuracy check (fusion beats single-sensor baseline)
+        run: |
+          python tests/test_fusion_accuracy.py --duration 15
+
+      - name: Dump pod status and logs on failure
+        if: failure()
+        run: |
+          kubectl get pods -o wide
+          kubectl logs deployment/fusion-service --tail=100 || true
+          kubectl logs deployment/gps-sim --tail=50 || true
