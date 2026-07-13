@@ -120,8 +120,6 @@ curl "localhost:18081/force-dropout?duration=15"
 
 ## Results and metrics
 
-All numbers below were measured by running the system on a live `kind` cluster, see [DESIGN.md](DESIGN.md) for full methodology.
-
 | Metric | Result |
 |---|---|
 | Fusion accuracy vs. GPS only baseline | 0.443m RMSE vs. 0.755m RMSE, **41.4% improvement** |
